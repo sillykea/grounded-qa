@@ -28,8 +28,9 @@ def test_answer_maps_citations_to_chunks():
     a = answer("How?", SOURCES, chat)
     assert [c.doc for c in a.cited_chunks] == ["ledger/a.md", "ledger/b.md"]
     assert a.invalid_citations == [3] and not a.refused
-    user = seen["messages"][1]["content"]
-    assert "[1] (ledger: ADR 3)" in user and user.endswith("Question: How?")
+    user = seen["messages"][-1]["content"]
+    assert "[1] (ledger: ADR 3)" in user and "Question: How?" in user
+    assert seen["messages"][-2]["role"] == "assistant"  # the worked examples come first
     d = a.to_dict()
     assert d["citations"][0]["url"].startswith("https://github.com/sillykea/ledger/")
 

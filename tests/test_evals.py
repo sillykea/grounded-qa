@@ -26,10 +26,10 @@ def test_scoring_with_a_fake_model():
     ]
 
     def chat(messages):
-        q = messages[1]["content"].rsplit("Question: ", 1)[1]
+        q = messages[-1]["content"].rsplit("Question: ", 1)[1]
         if "on call" in q:
             return "I don't know based on these documents."
-        n = next(i for i, part in enumerate(messages[1]["content"].split("\n\n[")) if "PBKDF2" in part)
+        n = next(i for i, part in enumerate(messages[-1]["content"].split("\n\n[")) if "PBKDF2" in part)
         n = n or 1
         return f"PBKDF2-SHA256 with 600,000 iterations [{n}]."
 

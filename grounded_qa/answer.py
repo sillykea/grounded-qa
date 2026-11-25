@@ -17,11 +17,33 @@ from .chunking import Chunk
 
 REFUSAL = "I don't know based on these documents."
 
-SYSTEM = f"""You answer questions about a set of engineering documents.
-Use only the numbered sources below. Do not use anything else you know.
-Cite the source of every statement with its number in square brackets, like [2].
-Answer in at most four sentences.
-If the sources do not contain the answer, reply exactly: {REFUSAL}"""
+SYSTEM = f"""You answer questions using only the numbered sources the user gives you.
+Rules:
+1. End every sentence with the number of the source it comes from, in square brackets, like [2].
+2. Use nothing but the sources. If they do not answer the question, reply exactly: {REFUSAL}
+3. Answer in at most three sentences."""
+
+# Small models follow an example far better than a rule, so the prompt shows
+# one cited answer and one refusal before the real question.
+EXAMPLES: list[dict[str, str]] = [
+    {
+        "role": "user",
+        "content": (
+            "Sources:\n\n[1] (billing: Invoices)\nInvoices are emailed on the first day of each month.\n\n"
+            "[2] (billing: Refunds)\nRefunds go back to the original card within 5 working days.\n\n"
+            "Question: How long does a refund take?"
+        ),
+    },
+    {"role": "assistant", "content": "A refund goes back to the original card within 5 working days [2]."},
+    {
+        "role": "user",
+        "content": (
+            "Sources:\n\n[1] (billing: Invoices)\nInvoices are emailed on the first day of each month.\n\n"
+            "Question: Which bank does the company use?"
+        ),
+    },
+    {"role": "assistant", "content": REFUSAL},
+]
 
 CITE = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
 REFUSED = re.compile(
@@ -64,7 +86,14 @@ def build_messages(question: str, sources: Sequence[Chunk]) -> list[dict[str, st
     context = "\n\n".join(f"[{i + 1}] ({c.repo}: {c.heading})\n{c.text}" for i, c in enumerate(sources))
     return [
         {"role": "system", "content": SYSTEM},
-        {"role": "user", "content": f"Sources:\n\n{context}\n\nQuestion: {question}"},
+        *EXAMPLES,
+        {
+            "role": "user",
+            "content": (
+                f"Sources:\n\n{context}\n\nQuestion: {question}\n\n"
+                f"Cite a source number after every sentence. If the sources don't say, reply: {REFUSAL}"
+            ),
+        },
     ]
 
 
