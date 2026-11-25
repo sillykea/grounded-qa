@@ -18,7 +18,13 @@ flowchart LR
     A --> V{Check citations<br/>and refusals}
 ```
 
-EXAMPLE_PLACEHOLDER
+A real answer from the CI run (qwen2.5:1.5b, through llm-gateway):
+
+> **Q:** What happens to ledger performance when most payments go to one hot account?
+>
+> **A:** When most payments go to one hot account, the cost of row locks increases significantly [1]. The load test shows that with 50 accounts, the p99 is ~140 ms; with 5 accounts, it is ~600 ms and throughput halves [2].
+
+The API returns each `[n]` with its document, section and a GitHub link.
 
 ## How it works
 
@@ -60,7 +66,25 @@ Retrieval (BM25 only, top 4, 36 answerable questions):
 | Right document ranked first | 89% |
 | Mean reciprocal rank | 0.94 |
 
-RESULTS_PLACEHOLDER
+Answers, through the full path (hybrid retrieval, qwen2.5:1.5b on Ollama via llm-gateway, temperature 0, on a CPU-only CI runner):
+
+| Metric | First prompt | With worked examples |
+|---|---|---|
+| Answers passing every check | 6% | **50%** |
+| Citing a right document | 6% | 78% |
+| Citations that all exist | 100% | 100% |
+| Required facts present | 83% | 67% |
+| Answerable questions refused | 0% | 3% |
+| Unanswerable questions refused | 17% | 67% |
+| Median seconds per answer | 16 | 22 |
+
+**What the evals found.** The first run showed the model almost never cited its sources and answered five of the six questions the docs can't answer, inventing an iOS app and a "100% uptime" guarantee. Small models follow an example better than a rule, so the prompt now opens with one cited answer and one refusal, and repeats the rule next to the question. Passing answers went from 6% to 50%. The answers got shorter, which cost some required facts.
+
+**What the remaining failures are.** Mostly a 1.5B model's limits: it says the fraud webhook returns 401 for a malformed event (it's 202), and it lists the personal data the gateway *does* detect when asked what it misses. Two unanswerable questions still get invented answers. CI thresholds sit just under these numbers, so a change that makes things worse fails the build. A bigger model is a gateway config change, and the same evals measure whether it's worth what it costs.
+
+**What the checks miss.** They prove a required fact is present, not that nothing false is next to it. One passing answer about ledger events adds a wrong claim about how the outbox commits. That is the gap an LLM judge fills, and why it comes next, measured against these checks.
+
+**Hybrid didn't beat BM25 here.** On this corpus BM25 alone ranks a right document first 89% of the time; fused with nomic-embed-text it's 86%, and one question drops out of the top 4. Engineering docs are full of exact identifiers, which is what BM25 is good at. Embeddings stay in because they help on paraphrased questions, but the numbers say they aren't free.
 
 ## Run it
 

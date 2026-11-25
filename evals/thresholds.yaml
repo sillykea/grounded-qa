@@ -1,9 +1,14 @@
 # The build fails if a metric falls past its threshold. Each is set a little
-# below the measured baseline, so noise doesn't fail builds but a real
-# regression does.
+# below the measured baseline (in brackets), so noise doesn't fail builds but
+# a real regression does. Raise them when the baseline improves.
 retrieval:
-  recall_at_4: 0.95   # baseline 1.00 (BM25 and hybrid)
-  recall_at_1: 0.80   # baseline 0.89 (BM25)
-  mrr: 0.85           # baseline 0.94 (BM25)
-answers:
-  answer_pass_rate: 0.0   # set from the first CI run with the real model
+  recall_at_4: 0.95   # BM25 1.00, hybrid 0.97
+  recall_at_1: 0.80   # BM25 0.89, hybrid 0.86
+  mrr: 0.85           # BM25 0.94, hybrid 0.91
+answers:              # qwen2.5:1.5b via llm-gateway
+  answer_pass_rate: 0.40   # 0.50
+  cites_right_doc: 0.65    # 0.78
+  citations_valid: 0.95    # 1.00
+  facts_found: 0.55        # 0.67
+  correct_refusals: 0.50   # 0.67
+  false_refusals: 0.10     # 0.03, at most
