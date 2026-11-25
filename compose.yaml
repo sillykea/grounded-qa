@@ -9,7 +9,7 @@ services:
   # github.com/sillykea/llm-gateway, pinned. Chat goes through it, so routing,
   # personal-data rules, rate limits and tracing apply to this app too.
   gateway:
-    build: https://github.com/sillykea/llm-gateway.git#4a3120bdd39416cc73d39478b008c74f4b7e68af
+    build: https://github.com/sillykea/llm-gateway.git#c693a21c2bdef50a8eead1c933ea31f3d0e25cf0
     environment:
       GATEWAY_API_KEY: demo-key
     volumes: ["./deploy/gateway.json:/etc/gateway/gateway.json:ro"]

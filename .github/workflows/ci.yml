@@ -55,7 +55,7 @@ jobs:
         run: test -f report.md && cat report.md >> "$GITHUB_STEP_SUMMARY" || true
       - name: Keep the answers
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with: { name: eval-results, path: results.json, if-no-files-found: ignore }
       - name: Gateway metrics
         if: always()
