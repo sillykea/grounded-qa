@@ -1,0 +1,29 @@
+# The whole path: this app -> llm-gateway -> Ollama.
+#   docker compose up -d --wait && make models && make eval
+services:
+  ollama:
+    image: ollama/ollama:0.9.0
+    volumes: [ollama:/root/.ollama]
+    ports: ["11434:11434"]   # embeddings go straight to Ollama
+
+  # github.com/sillykea/llm-gateway, pinned. Chat goes through it, so routing,
+  # personal-data rules, rate limits and tracing apply to this app too.
+  gateway:
+    build: https://github.com/sillykea/llm-gateway.git#4a3120bdd39416cc73d39478b008c74f4b7e68af
+    environment:
+      GATEWAY_API_KEY: demo-key
+    volumes: ["./deploy/gateway.json:/etc/gateway/gateway.json:ro"]
+    depends_on: [ollama]
+    ports: ["8080:8080"]
+
+  app:
+    build: .
+    environment:
+      LLM_URL: http://gateway:8080
+      LLM_API_KEY: demo-key
+      EMBED_URL: http://ollama:11434
+    depends_on: [gateway]
+    ports: ["8000:8000"]
+
+volumes:
+  ollama:

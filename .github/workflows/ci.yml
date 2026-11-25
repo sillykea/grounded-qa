@@ -1,0 +1,65 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # Fast checks on every change, no model needed.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with: { python-version: "3.13", cache: pip }
+      - run: pip install -e '.[dev]'
+      - name: Lint
+        run: ruff check . && ruff format --check .
+      - name: Unit tests
+        run: pytest -q
+      - name: Retrieval evals (BM25)
+        run: python -m grounded_qa eval --retrieval-only --report retrieval.md
+      - name: Report
+        if: always()
+        run: test -f retrieval.md && cat retrieval.md >> "$GITHUB_STEP_SUMMARY" || true
+
+  # Real answers from a real model: the app calls llm-gateway, which routes
+  # to a small model on Ollama. The build fails if answer quality drops.
+  answers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with: { python-version: "3.13", cache: pip }
+      - run: pip install -e .
+      - name: Start Ollama and llm-gateway
+        run: docker compose up --build -d ollama gateway
+      - name: Pull models
+        run: |
+          for i in $(seq 1 30); do curl -sf localhost:11434/api/version && break; sleep 1; done
+          docker compose exec -T ollama ollama pull qwen2.5:1.5b
+          docker compose exec -T ollama ollama pull nomic-embed-text
+      - name: Gateway is up
+        run: for i in $(seq 1 30); do curl -sf localhost:8080/readyz && break; sleep 1; done
+      - name: Answer evals (hybrid retrieval, qwen2.5:1.5b via llm-gateway)
+        env:
+          LLM_URL: http://localhost:8080
+          LLM_API_KEY: demo-key
+          EMBED_URL: http://localhost:11434
+        run: python -m grounded_qa eval --report report.md
+      - name: Report
+        if: always()
+        run: test -f report.md && cat report.md >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Keep the answers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: eval-results, path: results.json, if-no-files-found: ignore }
+      - name: Gateway metrics
+        if: always()
+        run: curl -s localhost:8080/metrics | grep -E '^llm_gateway_(requests|tokens|pii_detections)_total' || true
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --tail 60

@@ -1,0 +1,211 @@
+# Questions about the corpus, each with where the answer lives and the facts
+# a correct answer must contain (case-insensitive regular expressions).
+# Questions marked answerable: false are not covered by the documents: the
+# right answer is to say so.
+#
+# sources: any of these documents counts as the right place.
+# facts:   every pattern must appear in the answer.
+
+- id: ledger-retries
+  question: How does the payments ledger stop a client's retry from charging twice?
+  sources: [payments-ledger/docs/adr/0003-idempotency-keys.md, payments-ledger/README.md]
+  facts: ["idempotency", "same (database )?transaction|stored response|replay"]
+
+- id: ledger-key-reuse
+  question: What happens if a client reuses an idempotency key with a different request body in the ledger?
+  sources: [payments-ledger/docs/adr/0003-idempotency-keys.md]
+  facts: ["422|idempotency_key_reused|refused"]
+
+- id: ledger-floats
+  question: Why does the ledger store money as integers instead of floating point?
+  sources: [payments-ledger/docs/adr/0001-integer-minor-units.md, payments-ledger/README.md]
+  facts: ["minor unit|cents", "float"]
+
+- id: ledger-deadlocks
+  question: How does the ledger avoid deadlocks when two transfers lock the same accounts?
+  sources: [payments-ledger/docs/adr/0002-locking-and-hot-accounts.md, payments-ledger/README.md]
+  facts: ["order|sorted", "lock"]
+
+- id: ledger-reconciliation
+  question: What does the payments ledger's reconciliation check?
+  sources: [payments-ledger/docs/adr/0005-reconciliation.md, payments-ledger/README.md]
+  facts: ["balance", "entries", "zero"]
+
+- id: ledger-events
+  question: How does the payments ledger deliver events to other services, and what delivery guarantee do they get?
+  sources: [payments-ledger/docs/adr/0004-transactional-outbox.md, payments-ledger/README.md]
+  facts: ["outbox", "at.least.once"]
+
+- id: ledger-relays
+  question: How can several outbox relays run at once without sending the same event concurrently?
+  sources: [payments-ledger/docs/adr/0004-transactional-outbox.md, payments-ledger/README.md]
+  facts: ["skip locked"]
+
+- id: ledger-throughput
+  question: What throughput did the payments ledger load test reach with 50 accounts?
+  sources: [payments-ledger/README.md]
+  facts: ["957"]
+
+- id: ledger-hot-account
+  question: What happens to ledger performance when most payments go to one hot account?
+  sources: [payments-ledger/docs/adr/0002-locking-and-hot-accounts.md, payments-ledger/README.md]
+  facts: ["serialis|serializ|halves|470|605|600"]
+
+- id: fraud-rules
+  question: Which rules does the fraud detection service use to score payments?
+  sources: [fraud-detection/README.md]
+  facts: ["velocity", "structuring"]
+
+- id: fraud-why-rules
+  question: Why did the fraud detection service start with rules instead of a machine learning model?
+  sources: [fraud-detection/docs/adr/0001-rules-before-models.md]
+  facts: ["label"]
+
+- id: fraud-duplicates
+  question: What does the fraud detection service do when the ledger delivers the same event twice?
+  sources: [fraud-detection/docs/adr/0002-exactly-once-processing.md, fraud-detection/README.md]
+  facts: ["event.id|event_id|processed_events|already|duplicate"]
+
+- id: fraud-fpr
+  question: What false positive rate did the fraud detection simulator measure?
+  sources: [fraud-detection/README.md]
+  facts: ["0\\.074"]
+
+- id: fraud-malformed
+  question: What status code does the fraud service's webhook return for a malformed but authentic event?
+  sources: [fraud-detection/docs/adr/0002-exactly-once-processing.md, fraud-detection/README.md]
+  facts: ["202"]
+
+- id: fraud-blind-spot
+  question: Which fraud pattern does the fraud detection service knowingly fail to catch?
+  sources: [fraud-detection/README.md, fraud-detection/docs/adr/0004-measuring-detection.md]
+  facts: ["low.and.slow|single payment|3.5|one payment"]
+
+- id: fraud-signature
+  question: How does the fraud service check that events really came from the payments ledger?
+  sources: [fraud-detection/README.md]
+  facts: ["hmac|signature"]
+
+- id: fraud-ci-gate
+  question: When does the fraud detection CI build fail on detection quality?
+  sources: [fraud-detection/docs/adr/0004-measuring-detection.md, fraud-detection/README.md]
+  facts: ["90", "0\\.5"]
+
+- id: gw-pii-no-local
+  question: In llm-gateway, what happens to a request with personal data in route_local mode when no local provider is available?
+  sources: [llm-gateway/docs/adr/0002-fail-closed-on-personal-data.md, llm-gateway/README.md]
+  facts: ["422|reject|refus|fail"]
+
+- id: gw-stdlib
+  question: Why does llm-gateway use only the Go standard library?
+  sources: [llm-gateway/docs/adr/0001-standard-library-only.md, llm-gateway/docs/adr/0007-tracing-without-the-sdk.md]
+  facts: ["supply.chain|dependenc|image size"]
+
+- id: gw-stream-fallback
+  question: When can llm-gateway fall back to another provider during a streamed response?
+  sources: [llm-gateway/docs/adr/0004-streaming-fallback.md, llm-gateway/README.md]
+  facts: ["first"]
+
+- id: gw-capacity
+  question: What does llm-gateway do when it is at capacity?
+  sources: [llm-gateway/docs/adr/0005-load-shedding.md, llm-gateway/README.md, llm-gateway/docs/runbook.md]
+  facts: ["503"]
+
+- id: gw-shared-limits
+  question: How does llm-gateway enforce one rate limit across all of its replicas?
+  sources: [llm-gateway/docs/adr/0003-per-replica-state.md, llm-gateway/README.md]
+  facts: ["redis"]
+
+- id: gw-redis-down
+  question: What happens to llm-gateway's shared rate limits if Redis goes down?
+  sources: [llm-gateway/docs/adr/0003-per-replica-state.md, llm-gateway/docs/runbook.md, llm-gateway/README.md]
+  facts: ["fall(s)? back|own count|per.replica|its own"]
+
+- id: gw-otel-sdk
+  question: Why doesn't llm-gateway use the OpenTelemetry SDK for tracing?
+  sources: [llm-gateway/docs/adr/0007-tracing-without-the-sdk.md]
+  facts: ["standard.library|dependenc|modules"]
+
+- id: gw-prompts-on-spans
+  question: Does llm-gateway put prompts on trace spans?
+  sources: [llm-gateway/docs/adr/0007-tracing-without-the-sdk.md]
+  facts: ["never|no|not"]
+
+- id: gw-pii-gaps
+  question: What kinds of personal data does llm-gateway fail to detect?
+  sources: [llm-gateway/docs/threat-model.md, llm-gateway/docs/adr/0002-fail-closed-on-personal-data.md, llm-gateway/README.md]
+  facts: ["name", "address"]
+
+- id: gw-overhead
+  question: How much latency does llm-gateway add at 1,000 requests per second with the in-memory cache?
+  sources: [llm-gateway/README.md]
+  facts: ["0\\.4|1\\.4"]
+
+- id: gw-console-keys
+  question: How do API keys created in the console reach llm-gateway?
+  sources: [llm-gateway/docs/adr/0006-keys-from-the-console.md, llm-gateway-platform/docs/adr/0007-console-deployment.md, llm-gateway-platform/docs/runbook.md]
+  facts: ["hash|sha-256|poll|pull|30"]
+
+- id: console-one-replica
+  question: Why does the console run as a single replica?
+  sources: [llm-gateway-platform/docs/adr/0007-console-deployment.md, llm-gateway-console/docs/adr/0004-file-store.md]
+  facts: ["writer|file"]
+
+- id: console-passwords
+  question: How are console passwords hashed?
+  sources: [llm-gateway-console/docs/adr/0002-users-from-a-file.md, llm-gateway-console/README.md]
+  facts: ["pbkdf2", "600,?000"]
+
+- id: console-session
+  question: How long is a console session cookie valid?
+  sources: [llm-gateway-console/docs/adr/0003-signed-session-cookies.md, llm-gateway-console/README.md]
+  facts: ["8.hour|eight hours"]
+
+- id: platform-ci-aws
+  question: How does the platform's CI authenticate to AWS?
+  sources: [llm-gateway-platform/docs/adr/0003-ci-access-roles.md, llm-gateway-platform/README.md, llm-gateway-platform/docs/security.md]
+  facts: ["oidc"]
+
+- id: platform-prod-cost
+  question: Roughly how much does the platform's prod environment cost per month?
+  sources: [llm-gateway-platform/docs/cost.md, llm-gateway-platform/README.md]
+  facts: ["630"]
+
+- id: platform-redis-token
+  question: How is the ElastiCache Redis auth token created and delivered to the gateway?
+  sources: [llm-gateway-platform/docs/adr/0004-redis-tls-and-auth.md]
+  facts: ["terraform|random_password", "secrets manager|external secrets"]
+
+- id: platform-argocd
+  question: Why does the platform use Argo CD instead of installing everything with Terraform?
+  sources: [llm-gateway-platform/docs/adr/0002-gitops-with-argocd.md, llm-gateway-platform/README.md]
+  facts: ["credential|drift|selfheal|git"]
+
+- id: platform-nat
+  question: How many NAT gateways do the dev and prod environments use?
+  sources: [llm-gateway-platform/docs/adr/0005-environment-sizing.md, llm-gateway-platform/docs/cost.md]
+  facts: ["1|one", "per az|3|three"]
+
+- id: none-oncall
+  question: Who is on call for the payments ledger this week?
+  answerable: false
+
+- id: none-graphql
+  question: What GraphQL endpoint does the fraud detection service expose?
+  answerable: false
+
+- id: none-pricing
+  question: What does the enterprise plan for llm-gateway cost?
+  answerable: false
+
+- id: none-k8s-version
+  question: Which Kubernetes version does the payments ledger run on in production?
+  answerable: false
+
+- id: none-ios
+  question: Which iOS app shows fraud alerts to analysts?
+  answerable: false
+
+- id: none-sla
+  question: What uptime percentage does the console's contract guarantee to customers?
+  answerable: false

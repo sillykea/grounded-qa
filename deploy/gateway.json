@@ -1,0 +1,11 @@
+{
+  "listen": ":8080",
+  "api_keys": [{ "name": "grounded-qa", "key_env": "GATEWAY_API_KEY", "rpm": 600, "monthly_budget_usd": 0 }],
+  "providers": [
+    { "name": "ollama", "type": "ollama", "base_url": "http://ollama:11434", "local": true, "timeout_seconds": 300 }
+  ],
+  "models": { "chat": [{ "provider": "ollama", "model": "qwen2.5:1.5b" }] },
+  "pii": { "mode": "route_local" },
+  "cache": { "backend": "memory", "ttl_seconds": 3600 },
+  "limits": { "max_in_flight": 16 }
+}
